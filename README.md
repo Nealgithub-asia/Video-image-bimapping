@@ -1,1 +1,2 @@
-run it here: https://github.com/Nealgithub-asia/Video-image-bimapping.git
+run it locally for bitmapping your videos and image to add them in your projects
+
