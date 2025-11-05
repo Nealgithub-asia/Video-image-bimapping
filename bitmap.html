@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video & Image Dithering Effect</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #1f2937; /* Dark background */
+            color: #f3f4f6;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #a78bfa; /* Violet highlight */
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        
+        p {
+            max-width: 600px;
+            text-align: center;
+            color: #d1d5db;
+            margin-bottom: 20px;
+        }
+
+        #controls {
+            margin: 20px 0;
+            padding: 15px 25px;
+            border-radius: 12px;
+            background-color: #374151; /* Slightly lighter dark card */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Align items to the left within the control box */
+            gap: 15px; /* Spacing between elements */
+            width: 90%;
+            max-width: 600px;
+        }
+        
+        #input-group {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            transition: opacity 0.3s, filter 0.3s; /* Smooth transition for disabling */
+        }
+        
+        /* New style for disabled controls */
+        .disabled-group, .disabled-header, .disabled-button {
+            opacity: 0.5;
+            pointer-events: none; /* Prevents clicking the controls */
+            filter: grayscale(50%);
+        }
+        
+        /* General layout for labels and buttons */
+        .slider-header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            justify-content: space-between;
+            transition: opacity 0.3s, filter 0.3s;
+        }
+
+        .slider-header label {
+            margin: 0;
+        }
+
+        /* Icon button styling */
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            color: #d1d5db; /* Light gray color */
+            transition: color 0.2s;
+            border-radius: 4px;
+        }
+
+        .icon-button:hover {
+            color: #a78bfa; /* Violet hover */
+            background-color: #4b5563;
+        }
+        
+        .icon-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+
+        label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        input[type="file"] {
+            display: block;
+            padding: 10px;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #4b5563;
+            color: #f3f4f6;
+            transition: background-color 0.2s;
+            width: 100%; /* Full width within its group */
+        }
+
+        input[type="file"]:hover {
+            background-color: #6b7280;
+        }
+        
+        input[type="range"] {
+            flex-grow: 1;
+            margin: 0 10px;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            margin-top: -5px; /* Adjust vertical position */
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 5px;
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        
+        /* Style for Select element */
+        select {
+            padding: 8px;
+            border-radius: 6px;
+            background-color: #4b5563;
+            color: #f3f4f6;
+            border: 1px solid #6b7280;
+            flex-grow: 1;
+        }
+
+        .toggle-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s, opacity 0.3s;
+        }
+        
+        .toggle-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .toggle-on {
+            background-color: #a78bfa; /* Violet */
+            color: #1f2937;
+        }
+        
+        .toggle-off {
+            background-color: #ef4444; /* Red */
+            color: #f3f4f6;
+        }
+        
+        /* New style for the export button */
+        .export-button {
+            background-color: #34d399; /* Green color */
+            color: #1f2937;
+        }
+
+
+        .toggle-button:active {
+            transform: scale(0.98);
+        }
+
+
+        /* --- Threshold Graph Styles --- */
+        .threshold-graph-container {
+            width: 100%;
+            height: 150px; 
+            position: relative;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #4b5563;
+            transition: opacity 0.3s;
+        }
+        
+        .threshold-graph-container.hidden {
+            display: none;
+        }
+        
+        .threshold-graph-container.disabled-graph {
+            opacity: 0.3;
+        }
+        
+        #histogramCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .threshold-indicator {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background-color: #ef4444; /* Bright red line */
+            box-shadow: 0 0 5px rgba(239, 68, 68, 0.8);
+            transform: translateX(-50%); /* Center the line on the position */
+            z-index: 10; /* Ensure the indicator is on top of the canvas */
+        }
+        
+        /* Custom style for the Dither Type Toggle */
+        #ditherTypeButton {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            background-color: #4b5563;
+            color: #d1d5db;
+            border: 1px solid #6b7280;
+        }
+
+
+        /* Container for side-by-side display */
+        #media-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap; 
+            margin-top: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .media-box {
+            text-align: center;
+            flex-grow: 1;
+            min-width: 300px;
+            max-width: 45%;
+        }
+
+        .media-box p {
+            font-weight: bold;
+            color: #d1d5db;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Container for original video/canvas to manage visibility */
+        .source-wrapper {
+            position: relative;
+            width: 100%;
+            border: 4px solid #4b5563;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #4b5563; /* Placeholder BG */
+        }
+
+        #originalCanvas, #originalVideo {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 4px; /* Inner radius */
+        }
+
+        #videoControls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(20, 20, 20, 0.7);
+            border-radius: 8px;
+            padding: 8px;
+            display: none; /* Hidden by default */
+        }
+
+        #playPauseButton {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            color: #f3f4f6;
+        }
+        
+        #playPauseButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #processedCanvas {
+            border: 4px solid #4b5563;
+            border-radius: 8px;
+            display: block;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            width: 100%; 
+            height: auto;
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video & Image Dithering Effect</h1>
+    <p>Upload an image or MP4 video. All processing happens live in your browser.</p>
+
+    <div id="controls">
+        <div id="input-group">
+            <label for="mediaUpload">Choose an Image or Video File:</label>
+            <input type="file" id="mediaUpload" accept="image/*,video/mp4">
+        </div>
+
+        <!-- Toggle Bitmap Mode Button -->
+        <button id="toggleBitmapMode" class="toggle-button toggle-on">Bitmap Mode: ON</button>
+        <button id="exportImageButton" class="toggle-button export-button">Export Current Frame (PNG)</button>
+        <!-- New Video Export Button -->
+        <button id="exportVideoButton" class="toggle-button export-button" style="background-color: #f59e0b; display: none;">Export Video (WebM)</button>
+        
+        <hr style="width:100%; border-color: #4b5563;">
+        
+        <!-- Dithering Type Toggle -->
+        <button id="ditherTypeButton" class="toggle-button">Dithering Type: Random Noise</button>
+        
+        <!-- DITHERING MATRIX SIZE -->
+        <div class="slider-group disabled-group" id="matrixSizeGroup">
+            <label for="matrixSizeSelect">Dither Matrix Size:</label>
+            <select id="matrixSizeSelect">
+                <option value="2">2x2</option>
+                <option value="4" selected>4x4</option>
+                <option value="8">8x8</option>
+                <option value="16">16x16</option>
+                <option value="32">32x32</option>
+                <option value="64">64x64</option>
+                <option value="128">128x128</option>
+            </select>
+        </div>
+
+        <hr style="width:100%; border-color: #4b5563;">
+
+
+        <!-- Saturation Slider (Group gets disabled when Bitmap Mode is ON) -->
+        <div class="slider-group" id="saturationGroup">
+            <label for="saturationSlider">Saturation (%):</label>
+            <input type="range" id="saturationSlider" min="0" max="200" value="100">
+            <span id="saturationValue" style="width: 30px; text-align: right;">100</span>
+        </div>
+
+        <!-- Posterization Slider -->
+        <div class="slider-group">
+            <label for="posterizationSlider">Poster Levels (2-32):</label>
+            <input type="range" id="posterizationSlider" min="2" max="32" value="8">
+            <span id="posterizationValue" style="width: 30px; text-align: right;">8</span>
+        </div>
+
+        <!-- Resolution Slider -->
+        <div class="slider-group">
+            <label for="resolutionSlider">Resolution (%):</label>
+            <input type="range" id="resolutionSlider" min="10" max="100" value="100">
+            <span id="resolutionValue" style="width: 40px; text-align: right;">100%</span>
+        </div>
+
+        <!-- Noise Magnitude Slider -->
+        <div class="slider-group" id="noiseMagnitudeGroup">
+            <label for="noiseMagnitudeSlider">Noise Magnitude:</label>
+            <input type="range" id="noiseMagnitudeSlider" min="0" max="255" value="64">
+            <span id="noiseMagnitudeValue" style="width: 30px; text-align: right;">64</span>
+        </div>
+        
+        <!-- Threshold Controls Wrapper -->
+        <div style="width: 100%;">
+            <!-- Threshold Header with Icon Button -->
+            <div class="slider-header" id="thresholdHeader">
+                <label for="thresholdSlider">Threshold Value:</label>
+                <!-- Icon: Bar Chart (representing a histogram) -->
+                <button id="toggleGraphButton" class="icon-button" title="Toggle Histogram Visualization">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                </button>
+            </div>
+
+            <!-- Threshold Graph Visualization (Histogram) -->
+            <div class="threshold-graph-container hidden" id="thresholdGraphContainer">
+                <canvas id="histogramCanvas"></canvas>
+                <div id="thresholdIndicator" class="threshold-indicator"></div>
+            </div>
+
+            <!-- Threshold Slider - This group gets disabled when Bitmap Mode is OFF -->
+            <div class="slider-group" id="thresholdGroup">
+                <input type="range" id="thresholdSlider" min="0" max="255" value="128">
+                <span id="thresholdValue" style="width: 30px; text-align: right;">128</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="media-container">
+        <div class="media-box">
+            <p id="originalSourceTitle">Original Image</p>
+            <div class="source-wrapper">
+                <canvas id="originalCanvas"></canvas>
+                <video id="originalVideo" loop muted playsinline style="display: none;"></video>
+                <div id="videoControls">
+                    <button id="playPauseButton">
+                        <!-- Play Icon -->
+                        <svg id="playIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <!-- Pause Icon -->
+                        <svg id="pauseIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="media-box">
+            <p>Processed Output</p>
+            <canvas id="processedCanvas"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        // --- Global DOM Elements ---
+        const mediaUpload = document.getElementById('mediaUpload');
+        const originalCanvas = document.getElementById('originalCanvas');
+        const originalVideo = document.getElementById('originalVideo');
+        const videoControls = document.getElementById('videoControls');
+        const playPauseButton = document.getElementById('playPauseButton');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const originalSourceTitle = document.getElementById('originalSourceTitle');
+        const processedCanvas = document.getElementById('processedCanvas');
+        
+        const noiseMagnitudeSlider = document.getElementById('noiseMagnitudeSlider');
+        const noiseMagnitudeValueSpan = document.getElementById('noiseMagnitudeValue');
+        const noiseMagnitudeGroup = document.getElementById('noiseMagnitudeGroup');
+        
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        const thresholdValueSpan = document.getElementById('thresholdValue');
+        const thresholdGroup = document.getElementById('thresholdGroup'); 
+        const thresholdHeader = document.getElementById('thresholdHeader'); 
+
+        const saturationSlider = document.getElementById('saturationSlider');
+        const saturationValueSpan = document.getElementById('saturationValue');
+        const saturationGroup = document.getElementById('saturationGroup'); 
+
+        const posterizationSlider = document.getElementById('posterizationSlider');
+        const posterizationValueSpan = document.getElementById('posterizationValue');
+        
+        const resolutionSlider = document.getElementById('resolutionSlider');
+        const resolutionValueSpan = document.getElementById('resolutionValue');
+
+        const toggleBitmapModeButton = document.getElementById('toggleBitmapMode');
+        const toggleGraphButton = document.getElementById('toggleGraphButton');
+        const exportImageButton = document.getElementById('exportImageButton');
+        const ditherTypeButton = document.getElementById('ditherTypeButton');
+        const matrixSizeSelect = document.getElementById('matrixSizeSelect');
+        const matrixSizeGroup = document.getElementById('matrixSizeGroup');
+
+        const thresholdGraphContainer = document.getElementById('thresholdGraphContainer');
+        const thresholdIndicator = document.getElementById('thresholdIndicator');
+        
+        // New Video Export Button
+        const exportVideoButton = document.getElementById('exportVideoButton');
+
+        // Canvas Contexts
+        const originalCtx = originalCanvas.getContext('2d');
+        const processedCtx = processedCanvas.getContext('2d');
+        const histogramCanvas = document.getElementById('histogramCanvas');
+        const histogramCtx = histogramCanvas.getContext('2d');
+        
+        // Offscreen canvas for processing
+        const processOffscreenCanvas = document.createElement('canvas');
+        const processOffscreenCtx = processOffscreenCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const sourceOffscreenCanvas = document.createElement('canvas');
+        const sourceOffscreenCtx = sourceOffscreenCanvas.getContext('2d', { willReadFrequently: true });
+
+        // --- Global State ---
+        let currentMedia = {
+            element: null, // Will be originalVideo or originalCanvas
+            type: 'none', // 'image' or 'video'
+            width: 400,
+            height: 300
+        };
+        
+        let currentNoiseMagnitude = 64; 
+        let currentThreshold = 128;     
+        let currentSaturation = 100;    
+        let currentPosterizationLevels = 8;
+        let currentResolution = 100;
+
+        let isBitmapMode = true; 
+        let isGraphVisible = false; 
+        let isVideoPlaying = false;
+        let ditherType = 'random';
+        let currentMatrixSize = 4;
+        let currentMatrix = null; // Will be set after generation
+        
+        // MediaRecorder state
+        let recorder = null;
+        let recordedChunks = [];
+
+        // --- Bayer Matrix Generation ---
+        function generateBayerMatrix(size) {
+            // FIX: Ensure size is a number for the base case
+            size = Number(size);
+            if (size === 2) {
+                return [
+                    [0, 2],
+                    [3, 1]
+                ];
+            }
+            const m_prev = generateBayerMatrix(size / 2);
+            const newMatrix = Array(size).fill(0).map(() => Array(size));
+            const factor = (size * size) / 4;
+            
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const half_x = x % (size / 2);
+                    const half_y = y % (size / 2);
+                    
+                    if (y < size / 2) {
+                        if (x < size / 2) { // Top-left
+                            newMatrix[y][x] = 4 * m_prev[half_y][half_x];
+                        } else { // Top-right
+                            newMatrix[y][x] = 4 * m_prev[half_y][half_x] + 2;
+                        }
+                    } else {
+                        if (x < size / 2) { // Bottom-left
+                            newMatrix[y][x] = 4 * m_prev[half_y][half_x] + 3;
+                        } else { // Bottom-right
+                            newMatrix[y][x] = 4 * m_prev[half_y][half_x] + 1;
+                        }
+                    }
+                }
+            }
+            return newMatrix;
+        }
+        // Generate all matrices on load
+        const BAYER_MATRICES = { 2:0, 4:0, 8:0, 16:0, 32:0, 64:0, 128:0 };
+        for(const size in BAYER_MATRICES) { BAYER_MATRICES[size] = generateBayerMatrix(parseInt(size)); }
+        currentMatrix = BAYER_MATRICES[currentMatrixSize];
+
+        // --- Core Processing Loop ---
+        function processFrame() {
+            if (!currentMedia.element) return;
+            
+            const scaledWidth = Math.floor(currentMedia.width * (currentResolution / 100));
+            const scaledHeight = Math.floor(currentMedia.height * (currentResolution / 100));
+
+            // Ensure offscreen canvases are the correct size
+            if (processOffscreenCanvas.width !== scaledWidth || processOffscreenCanvas.height !== scaledHeight) {
+                processOffscreenCanvas.width = scaledWidth;
+                processOffscreenCanvas.height = scaledHeight;
+            }
+            if (sourceOffscreenCanvas.width !== currentMedia.width || sourceOffscreenCanvas.height !== currentMedia.height) {
+                sourceOffscreenCanvas.width = currentMedia.width;
+                sourceOffscreenCanvas.height = currentMedia.height;
+            }
+            
+            // 1. Get source data
+            let sourceElement = currentMedia.element;
+            let sourceImageData;
+            
+            if (currentMedia.type === 'video') {
+                // Draw video frame to source offscreen canvas, then get data
+                sourceOffscreenCtx.drawImage(sourceElement, 0, 0, currentMedia.width, currentMedia.height);
+                sourceImageData = sourceOffscreenCtx.getImageData(0, 0, currentMedia.width, currentMedia.height);
+            } else {
+                // Image data is already on the original canvas
+                sourceImageData = originalCtx.getImageData(0, 0, currentMedia.width, currentMedia.height);
+            }
+
+            // 2. Draw source to the scaled-down processing canvas (for resolution drop)
+            processOffscreenCtx.drawImage(sourceElement, 0, 0, scaledWidth, scaledHeight);
+            
+            // 3. Get scaled-down image data
+            const processedImageData = processOffscreenCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+            const data = processedImageData.data;
+
+            const SAT_FACTOR = currentSaturation / 100.0;
+            const validPosterLevels = Math.max(2, currentPosterizationLevels); 
+            const POSTER_STEP = 256 / validPosterLevels;
+            const size = currentMatrixSize;
+            const scale = size * size;
+
+            // 4. Main processing loop
+            for (let i = 0; i < data.length; i += 4) {
+                const pixelIndex = i / 4;
+                const x = pixelIndex % scaledWidth;
+                const y = Math.floor(pixelIndex / scaledWidth);
+
+                let r = data[i];
+                let g = data[i + 1];
+                let b = data[i + 2];
+                
+                // --- 1. Apply Saturation ---
+                const L = 0.299 * r + 0.587 * g + 0.114 * b;
+                r = L + (r - L) * SAT_FACTOR;
+                g = L + (g - L) * SAT_FACTOR;
+                b = L + (b - L) * SAT_FACTOR;
+                r = Math.max(0, Math.min(255, r));
+                g = Math.max(0, Math.min(255, g));
+                b = Math.max(0, Math.min(255, b));
+                
+                // --- 2. Apply Posterization ---
+                r = Math.floor(r / POSTER_STEP) * POSTER_STEP;
+                g = Math.floor(g / POSTER_STEP) * POSTER_STEP;
+                b = Math.floor(b / POSTER_STEP) * POSTER_STEP;
+
+                let finalR, finalG, finalB;
+
+                if (isBitmapMode) {
+                    // --- 3a. Bitmap Mode ---
+                    const finalLuminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                    let newColor;
+                    
+                    if (ditherType === 'bayer') {
+                        const matrixValue = currentMatrix[y % size][x % size];
+                        const adjustment = currentThreshold - 128;
+                        const adjustedLuminance = Math.max(0, Math.min(255, finalLuminance + adjustment));
+                        newColor = (adjustedLuminance / 255.0) > ((matrixValue + 0.5) / scale) ? 255 : 0;
+                    } else { // 'random'
+                        newColor = (finalLuminance + (Math.random() - 0.5) * currentNoiseMagnitude > currentThreshold) ? 255 : 0;
+                    }
+                    finalR = finalG = finalB = newColor;
+                } else {
+                    // --- 3b. Color Mode ---
+                    const noise = (Math.random() - 0.5) * currentNoiseMagnitude;
+                    finalR = Math.max(0, Math.min(255, r + noise));
+                    finalG = Math.max(0, Math.min(255, g + noise));
+                    finalB = Math.max(0, Math.min(255, b + noise));
+                }
+
+                data[i] = finalR;       
+                data[i + 1] = finalG; 
+                data[i + 2] = finalB;
+                // Alpha (keep original)
+            }
+
+            // 5. Put processed data back onto the offscreen canvas
+            processOffscreenCtx.putImageData(processedImageData, 0, 0);
+
+            // 6. Draw final result to visible canvas (scaling up)
+            processedCtx.imageSmoothingEnabled = false;
+            processedCtx.clearRect(0, 0, processedCanvas.width, processedCanvas.height);
+            processedCtx.drawImage(processOffscreenCanvas, 0, 0, processedCanvas.width, processedCanvas.height);
+            
+            // 7. Update histogram (if visible)
+            if (isGraphVisible && isBitmapMode) {
+                calculateAndDrawHistogram(sourceImageData.data); // Use original data for histogram
+            }
+
+            // 8. Loop if video is playing
+            // --- FIX 2 ---
+            // This logic is now simplified. The 'ended' event listener
+            // in startVideoExport handles stopping the loop.
+            if (currentMedia.type === 'video' && isVideoPlaying) {
+                requestAnimationFrame(processFrame);
+            }
+            // --- END FIX 2 ---
+        }
+
+        // --- Histogram Logic ---
+        function calculateAndDrawHistogram(originalData) {
+            if (!originalData) return;
+            
+            histogramCanvas.width = thresholdGraphContainer.clientWidth;
+            histogramCanvas.height = thresholdGraphContainer.clientHeight;
+            histogramCtx.clearRect(0, 0, histogramCanvas.width, histogramCanvas.height);
+            
+            const histogram = new Array(256).fill(0);
+            const SAT_FACTOR = currentSaturation / 100.0;
+            const validPosterLevels = Math.max(2, currentPosterizationLevels); 
+            const POSTER_STEP = 256 / validPosterLevels;
+            
+            for (let i = 0; i < originalData.length; i += 4) {
+                let r = originalData[i], g = originalData[i + 1], b = originalData[i + 2];
+                const L_sat = 0.299 * r + 0.587 * g + 0.114 * b;
+                r = L_sat + (r - L_sat) * SAT_FACTOR;
+                g = L_sat + (g - L_sat) * SAT_FACTOR;
+                b = L_sat + (b - L_sat) * SAT_FACTOR;
+                r = Math.max(0, Math.min(255, r));
+                g = Math.max(0, Math.min(255, g));
+                b = Math.max(0, Math.min(255, b));
+                r = Math.floor(r / POSTER_STEP) * POSTER_STEP;
+                g = Math.floor(g / POSTER_STEP) * POSTER_STEP;
+                b = Math.floor(b / POSTER_STEP) * POSTER_STEP;
+                const finalLuminance = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+                histogram[Math.min(255, Math.max(0, finalLuminance))]++;
+            }
+
+            const smoothedHistogram = new Array(256).fill(0);
+            let smoothedMaxCount = 0;
+            for (let i = 0; i < 256; i++) {
+                let sum = 0, count = 0;
+                for (let j = -2; j <= 2; j++) { 
+                    const index = i + j;
+                    if (index >= 0 && index < 256) {
+                        sum += histogram[index];
+                        count++;
+                    }
+                }
+                const smoothedValue = sum / count;
+                smoothedHistogram[i] = smoothedValue;
+                if (smoothedValue > smoothedMaxCount) smoothedMaxCount = smoothedValue;
+            }
+
+            if (smoothedMaxCount === 0) return; 
+
+            const canvasWidth = histogramCanvas.width, canvasHeight = histogramCanvas.height;
+            const binWidth = canvasWidth / 256;
+            
+            const gradient = histogramCtx.createLinearGradient(0, 0, canvasWidth, 0);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.15)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0.15)');
+            histogramCtx.fillStyle = gradient;
+            histogramCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            histogramCtx.beginPath();
+            histogramCtx.strokeStyle = '#a78bfa';
+            histogramCtx.fillStyle = 'rgba(167, 139, 250, 0.4)';
+            histogramCtx.lineWidth = 1.5;
+            histogramCtx.moveTo(0, canvasHeight);
+            for (let i = 0; i < 256; i++) {
+                const normalizedHeight = (smoothedHistogram[i] / smoothedMaxCount) * canvasHeight;
+                histogramCtx.lineTo(i * binWidth, canvasHeight - normalizedHeight);
+            }
+            histogramCtx.lineTo(canvasWidth, canvasHeight);
+            histogramCtx.closePath();
+            histogramCtx.fill();
+            histogramCtx.stroke();
+        }
+
+        // --- UI State Management ---
+        function updateGraphVisibility() {
+            if (isGraphVisible && isBitmapMode) {
+                thresholdGraphContainer.classList.remove('hidden');
+                processFrame(); // This will trigger the histogram draw
+            } else {
+                thresholdGraphContainer.classList.add('hidden');
+            }
+        }
+
+        function updateThresholdControlsState() {
+            const positionPercent = (currentThreshold / 255) * 100;
+            thresholdIndicator.style.left = `${positionPercent}%`;
+
+            if (isBitmapMode) {
+                thresholdGroup.classList.remove('disabled-group');
+                thresholdHeader.classList.remove('disabled-header');
+                thresholdGraphContainer.classList.remove('disabled-graph');
+                thresholdIndicator.style.display = 'block';
+                saturationGroup.classList.add('disabled-group');
+                updateGraphVisibility();
+            } else {
+                thresholdGroup.classList.add('disabled-group');
+                thresholdHeader.classList.add('disabled-header');
+                thresholdGraphContainer.classList.add('disabled-graph');
+                thresholdIndicator.style.display = 'none';
+                saturationGroup.classList.remove('disabled-group');
+                if (isGraphVisible) updateGraphVisibility(); // Hide graph if it was visible
+            }
+            
+            ditherTypeButton.textContent = `Dither Type: ${ditherType === 'random' ? 'Random Noise' : 'Bayer Dithering'}`;
+            
+            if (ditherType === 'bayer') {
+                noiseMagnitudeGroup.classList.add('disabled-group');
+                matrixSizeGroup.classList.remove('disabled-group');
+            } else {
+                noiseMagnitudeGroup.classList.remove('disabled-group');
+                matrixSizeGroup.classList.add('disabled-group');
+            }
+        }
+        
+        function updatePlayPauseButton() {
+            if (isVideoPlaying) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
+        }
+
+        // --- Initial Setup & Event Listeners ---
+        
+        // Set initial placeholder canvas
+        originalCanvas.width = 400;
+        originalCanvas.height = 300;
+        processedCanvas.width = 400;
+        processedCanvas.height = 300;
+        originalCtx.fillStyle = '#4b5563';
+        originalCtx.fillRect(0, 0, 400, 300);
+        processedCtx.fillStyle = '#4b5563';
+        processedCtx.fillRect(0, 0, 400, 300);
+
+        // --- Media Loading ---
+        mediaUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileURL = URL.createObjectURL(file);
+            
+            // Stop any previous video
+            if (currentMedia.type === 'video' && isVideoPlaying) {
+                originalVideo.pause();
+                isVideoPlaying = false;
+                updatePlayPauseButton();
+            }
+            
+            if (file.type.startsWith('video/')) {
+                currentMedia.type = 'video';
+                currentMedia.element = originalVideo;
+                originalVideo.src = fileURL;
+                originalVideo.style.display = 'block';
+                videoControls.style.display = 'block';
+                originalCanvas.style.display = 'none';
+                originalSourceTitle.textContent = "Original Video";
+                
+                // Show video-specific buttons
+                exportImageButton.textContent = "Export Current Frame (PNG)";
+                exportVideoButton.style.display = 'block';
+
+                originalVideo.onloadedmetadata = () => {
+                    currentMedia.width = originalVideo.videoWidth;
+                    currentMedia.height = originalVideo.videoHeight;
+                    // Set initial processed canvas size based on resolution
+                    const scaledWidth = Math.floor(currentMedia.width * (currentResolution / 100));
+                    const scaledHeight = Math.floor(currentMedia.height * (currentResolution / 100));
+                    processedCanvas.width = scaledWidth;
+                    processedCanvas.height = scaledHeight;
+                    
+                    // Start playing and processing
+                    originalVideo.play();
+                    isVideoPlaying = true;
+                    updatePlayPauseButton();
+                    processFrame();
+                };
+            } else if (file.type.startsWith('image/')) {
+                currentMedia.type = 'image';
+                currentMedia.element = originalCanvas;
+                originalVideo.style.display = 'none';
+                videoControls.style.display = 'none';
+                originalCanvas.style.display = 'block';
+                originalSourceTitle.textContent = "Original Image";
+
+                // Show image-specific buttons
+                exportImageButton.textContent = "Export Image (PNG)";
+                exportVideoButton.style.display = 'none';
+
+                const img = new Image();
+                img.onload = () => {
+                    currentMedia.width = img.width;
+                    currentMedia.height = img.height;
+                    originalCanvas.width = currentMedia.width;
+                    originalCanvas.height = currentMedia.height;
+                    // Set initial processed canvas size based on resolution
+                    const scaledWidth = Math.floor(currentMedia.width * (currentResolution / 100));
+                    const scaledHeight = Math.floor(currentMedia.height * (currentResolution / 100));
+                    processedCanvas.width = scaledWidth;
+                    processedCanvas.height = scaledHeight;
+                    
+                    originalCtx.drawImage(img, 0, 0, currentMedia.width, currentMedia.height);
+                    processFrame();
+                };
+                img.src = fileURL;
+            }
+        });
+
+        // Video controls
+        playPauseButton.addEventListener('click', () => {
+            if (currentMedia.type !== 'video') return;
+            
+            if (isVideoPlaying) {
+                originalVideo.pause();
+            } else {
+                originalVideo.play();
+                processFrame(); // Re-kick animation loop
+            }
+            isVideoPlaying = !isVideoPlaying;
+            updatePlayPauseButton();
+        });
+
+        // Disables all interactive controls during video export
+        function setInteractiveControlsDisabled(disabled) {
+            document.querySelectorAll('#controls input, #controls select, #controls button').forEach(el => {
+                if (el.id !== 'exportVideoButton') { // Don't disable the export button itself
+                    el.disabled = disabled;
+                }
+            });
+            // Re-enable/disable based on state
+            if (!disabled) {
+                updateThresholdControlsState();
+            }
+        }
+
+        // Generic handler for controls that trigger a re-process
+        function addProcessTrigger(element, valueUpdater) {
+            element.addEventListener('input', (e) => {
+                valueUpdater(e);
+                if (currentMedia.type === 'image') {
+                    processFrame();
+                } else if (currentMedia.type === 'video' && !isVideoPlaying) {
+                    // Update static frame if video is paused
+                    processFrame();
+                }
+            });
+        }
+
+        addProcessTrigger(noiseMagnitudeSlider, (e) => {
+            currentNoiseMagnitude = parseInt(e.target.value);
+            noiseMagnitudeValueSpan.textContent = currentNoiseMagnitude;
+        });
+
+        addProcessTrigger(thresholdSlider, (e) => {
+            currentThreshold = parseInt(e.target.value);
+            thresholdValueSpan.textContent = currentThreshold;
+        });
+        
+        addProcessTrigger(saturationSlider, (e) => {
+            currentSaturation = parseInt(e.target.value);
+            saturationValueSpan.textContent = currentSaturation;
+        });
+        
+        addProcessTrigger(posterizationSlider, (e) => {
+            currentPosterizationLevels = parseInt(e.target.value);
+            posterizationValueSpan.textContent = currentPosterizationLevels;
+        });
+
+        addProcessTrigger(resolutionSlider, (e) => {
+            currentResolution = parseInt(e.target.value);
+            resolutionValueSpan.textContent = `${currentResolution}%`;
+            
+            // Need to resize processed canvas
+            const scaledWidth = Math.floor(currentMedia.width * (currentResolution / 100));
+            const scaledHeight = Math.floor(currentMedia.height * (currentResolution / 100));
+            
+            // Keep aspect ratio of the *output canvas* consistent with the *processed* aspect ratio
+            processedCanvas.width = scaledWidth;
+            processedCanvas.height = scaledHeight;
+            // The CSS will scale this up to fit the box
+        });
+        
+        addProcessTrigger(matrixSizeSelect, (e) => {
+            currentMatrixSize = parseInt(e.target.value);
+            currentMatrix = BAYER_MATRICES[currentMatrixSize];
+        });
+
+        // Bitmap Mode Toggle
+        toggleBitmapModeButton.addEventListener('click', () => {
+            isBitmapMode = !isBitmapMode;
+            toggleBitmapModeButton.textContent = isBitmapMode ? 'Bitmap Mode: ON' : 'Bitmap Mode: OFF';
+            toggleBitmapModeButton.classList.toggle('toggle-on', isBitmapMode);
+            toggleBitmapModeButton.classList.toggle('toggle-off', !isBitmapMode);
+            updateThresholdControlsState();
+            if (currentMedia.type === 'image' || !isVideoPlaying) processFrame();
+        });
+        
+        // Dither Type Toggle
+        ditherTypeButton.addEventListener('click', () => {
+            ditherType = ditherType === 'random' ? 'bayer' : 'random';
+            updateThresholdControlsState();
+            if (currentMedia.type === 'image' || !isVideoPlaying) processFrame();
+        });
+
+        // Frame Export
+        exportImageButton.addEventListener('click', () => {
+            if (!currentMedia.element) return;
+            // Ensure the processed canvas is at the correct resolution for export
+            const exportWidth = Math.floor(currentMedia.width * (currentResolution / 100));
+            const exportHeight = Math.floor(currentMedia.height * (currentResolution / 100));
+            
+            // Check if canvas size needs update
+            if (processedCanvas.width !== exportWidth || processedCanvas.height !== exportHeight) {
+                 processedCanvas.width = exportWidth;
+                 processedCanvas.height = exportHeight;
+                 processFrame(); // Run one more process pass at export res
+            }
+            
+            const dataURL = processedCanvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'processed-frame.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+        
+        // --- FIX 1 ---
+        // This is the entire updated function
+        // --- New Video Export Function ---
+        function startVideoExport() {
+            if (!currentMedia.element || currentMedia.type !== 'video' || typeof MediaRecorder === 'undefined') {
+                console.error("Cannot export video. No video loaded or MediaRecorder not supported.");
+                exportVideoButton.textContent = 'Error: Not supported';
+                setTimeout(() => exportVideoButton.textContent = 'Export Video (WebM)', 3000);
+                return;
+            }
+
+            // 1. Set UI to exporting state
+            setInteractiveControlsDisabled(true);
+            exportVideoButton.textContent = 'Processing...';
+            exportVideoButton.disabled = true;
+
+            // --- FIX ---
+            // Temporarily disable looping for the export
+            originalVideo.loop = false;
+            // --- END FIX ---
+
+            // 2. Setup Streams
+            const canvasStream = processedCanvas.captureStream(30); // Target 30 FPS
+            let audioTrack = null;
+            
+            try {
+                let audioStream = null;
+                if (originalVideo.captureStream) {
+                    audioStream = originalVideo.captureStream();
+                } else if (originalVideo.mozCaptureStream) { // Firefox fallback
+                    audioStream = originalVideo.mozCaptureStream();
+                }
+
+                if(audioStream && audioStream.getAudioTracks().length > 0) {
+                    [audioTrack] = audioStream.getAudioTracks();
+                } else {
+                     console.warn("No audio track found in the video.");
+                }
+            } catch (e) {
+                 console.error("Error capturing audio stream:", e);
+            }
+            
+            const tracks = [...canvasStream.getVideoTracks()];
+            if (audioTrack) tracks.push(audioTrack);
+            const combinedStream = new MediaStream(tracks);
+
+            // 3. Setup MediaRecorder
+            recordedChunks = [];
+            
+            const mimeTypes = [
+                'video/webm; codecs=vp9,opus',
+                'video/webm; codecs=vp9',
+                'video/webm; codecs=vp8,opus',
+                'video/webm; codecs=vp8',
+                'video/webm; codecs=h264,opus',
+                'video/webm; codecs=h264',
+                'video/webm'
+            ];
+            
+            const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
+            
+            if (!supportedMimeType) {
+                 console.error("No supported WebM mime type found (vp9, vp8, h264, or generic).");
+                 exportVideoButton.textContent = 'Error: WebM not supported';
+                 setInteractiveControlsDisabled(false);
+                 exportVideoButton.disabled = false;
+                 originalVideo.loop = true; // Re-enable loop on error
+                 return;
+            }
+            
+            console.log("Using MIME type:", supportedMimeType);
+            recorder = new MediaRecorder(combinedStream, { mimeType: supportedMimeType });
+
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'processed-video.webm';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                // Reset UI
+                setInteractiveControlsDisabled(false);
+                exportVideoButton.textContent = 'Export Video (WebM)';
+                exportVideoButton.disabled = false;
+                
+                // --- FIX ---
+                // Re-enable looping
+                originalVideo.loop = true; 
+                // --- END FIX ---
+
+                // Stop the processing loop
+                isVideoPlaying = false; 
+                updatePlayPauseButton();
+                
+                // Clean up
+                recorder = null;
+                recordedChunks = [];
+            };
+
+            // 4. Start Process
+            // Listen for the 'ended' event to stop recording
+            originalVideo.addEventListener('ended', () => {
+                if (recorder && recorder.state === 'recording') {
+                    recorder.stop();
+                }
+            }, { once: true });
+            
+            recorder.start();
+            
+            // Go to start and play
+            originalVideo.currentTime = 0;
+            
+            // Set state for the processFrame loop
+            isVideoPlaying = true; 
+            originalVideo.play();
+            requestAnimationFrame(processFrame); // Kickstart the loop
+            
+            // Update UI (play button)
+            updatePlayPauseButton();
+        }
+        // --- END FIX 1 ---
+
+        
+        // Add listener to the new button
+        exportVideoButton.addEventListener('click', startVideoExport);
+
+        // Histogram graph toggle
+        toggleGraphButton.addEventListener('click', () => {
+            if (isBitmapMode) { 
+                isGraphVisible = !isGraphVisible;
+                updateGraphVisibility();
+            }
+        });
+
+        // Set initial slider values
+        noiseMagnitudeSlider.value = currentNoiseMagnitude;
+        thresholdSlider.value = currentThreshold;
+        saturationSlider.value = currentSaturation;
+        posterizationSlider.value = currentPosterizationLevels;
+        resolutionSlider.value = currentResolution;
+        
+        noiseMagnitudeValueSpan.textContent = currentNoiseMagnitude;
+        thresholdValueSpan.textContent = currentThreshold;
+        saturationValueSpan.textContent = currentSaturation;
+        posterizationValueSpan.textContent = currentPosterizationLevels;
+        resolutionValueSpan.textContent = `${currentResolution}%`;
+        
+        // Set initial UI state
+        updateThresholdControlsState();
+        
+    </script>
+</body>
+</html>
+
